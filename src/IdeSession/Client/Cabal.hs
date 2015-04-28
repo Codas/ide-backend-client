@@ -3,24 +3,31 @@ module IdeSession.Client.Cabal (
   , initCabalSession
   ) where
 
-import Control.Exception
-import Data.List
-import Data.Maybe
-import Data.Monoid
-import System.Directory
-import System.FilePath
+import           Control.Exception
+import           Control.Monad
+import qualified Data.ByteString.Lazy as L
+import           Data.List
+import           Data.Maybe
+import           Data.Monoid
+import           Data.Set (Set)
+import qualified Data.Set as S
+import           Filesystem as FP
+import qualified Filesystem.Path.CurrentOS as FP
+import           System.Directory
+import           System.FilePath
 
-import Distribution.Package
-import Distribution.PackageDescription
-import Distribution.Simple.BuildTarget
-import Distribution.Simple.Configure
-import Distribution.Simple.LocalBuildInfo
-import qualified Distribution.ModuleName      as C
+import           Distribution.Package
+import           Distribution.PackageDescription
+import           Distribution.Simple.BuildTarget
+import           Distribution.Simple.Configure
+import           Distribution.Simple.LocalBuildInfo
+import qualified Distribution.ModuleName as C
 import qualified Distribution.Simple.Compiler as C
 
-import IdeSession
-import IdeSession.Client.CmdLine
-import IdeSession.Client.JsonAPI
+import           IdeSession
+import           IdeSession.Client.CmdLine
+import           IdeSession.Client.Git
+import           IdeSession.Client.JsonAPI
 
 {-------------------------------------------------------------------------------
   Top-level API
@@ -45,7 +52,13 @@ initCabalSession Options{..} CabalOptions{..} = do
                                  $ map translatePackageDB (withPackageDB lbi)
           }
     session <- initSession initParams config
+    gitFiles <- getGitFiles >>= fmap S.fromList . filterM isFile . S.toList
+    dataFileUpdates <- forM (S.toList gitFiles)
+                            (\fp ->
+                               do content <- L.readFile (FP.encodeString fp)
+                                  return (updateDataFile (FP.encodeString fp) content))
     let loadModules = mconcat $ map updateSourceFileFromFile mods
+                      <> dataFileUpdates
     updateSession session loadModules (putEnc . ResponseUpdateSession . Just)
     putEnc $ ResponseUpdateSession Nothing
     -- dumpIdInfo session

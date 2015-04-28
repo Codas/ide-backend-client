@@ -3,7 +3,7 @@
 -- Defined as a separate module only because of TH stage restrictions.
 module IdeSession.Client.JsonAPI.Aux where
 
-import Data.Char
+import           Data.Char
 
 -- | Given FooBarBaz, return fooBarBaz
 prismNameForConstructor :: String -> String

@@ -135,7 +135,7 @@ mainLoop session = do
             fileMap <- getFileMap session
             case fileMap (autocompletionFilePath autocmpletionSpan) of
               Just mod -> do
-                let query = (autocompletionPrefix autocmpletionSpan)
+                let query = autocompletionPrefix autocmpletionSpan
                     splitQualifier = join (***) reverse . break (== '.') . reverse
                     (prefix, qualifierStr) = splitQualifier query
                     qualifier = mfilter (not . Text.null) (Just (Text.pack qualifierStr))
